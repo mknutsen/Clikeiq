@@ -17,27 +17,44 @@ import "CoreLibs/timer"
 -- NOTE: Because it's local, you'll have to do it in every .lua source file.
 
 -- local gfx <const> = playdate.graphics
-print("enter")
-function cb()
-	playdate.graphics.drawRect(100, 50, 75, 25) 
-		print("callback")
-end
-
-playdate.graphics.drawRect(0, 0, 10, 10) 
 local channel = playdate.sound.channel.new()
-local synth = playdate.sound.synth.new()
-local delay = playdate.sound.bitcrusher.new()
-delay:setMix(60)
-delay:setAmount(.5)
-delay:setUndersampling(0.5)
-synth:setWaveform(playdate.sound.kWaveSine)
-synth:setFinishCallback(cb)
-channel:addSource(synth)
-channel:addEffect(delay)
-synth:playMIDINote(50, 1, 1)
+
+local synthNoise = playdate.sound.synth.new()
+synthNoise:setWaveform(playdate.sound.kWaveNoise)
+channel:addSource(synthNoise)
+local synthSin = playdate.sound.synth.new()
+synthSin:setWaveform(playdate.sound.kWaveSine)
+channel:addSource(synthSin)
+local synthSaw = playdate.sound.synth.new()
+synthSaw:setWaveform(playdate.sound.kWaveSawtooth)
+channel:addSource(synthSaw)
+local synthTriangle = playdate.sound.synth.new()
+synthTriangle:setWaveform(playdate.sound.kWaveTriangle)
+channel:addSource(synthTriangle)
+
+local crush = playdate.sound.bitcrusher.new()
+crush:setMix(60)
+crush:setAmount(.5)
+crush:setUndersampling(0.5)
+channel:addEffect(crush)
+
+local baseNoteSin = 50 -- near middle c
+local baseNoteTriangle = 50 -- near middle c
+local baseNoteSaw = 50 -- near middle c
+local baseNoteNoise = 50 -- near middle c
+
+local spread = 12 -- one octave
 -- `playdate.update()` is the heart of every Playdate game.
 -- This function is called right before every frame is drawn onscreen.
 -- Use this function to poll input, run game logic, and move sprites.
+
+function draw()
+	local x = math.random(400)
+	local y = math.random(200)
+	local w = math.random(300)
+	local h = math.random(100)
+	playdate.graphics.drawRect(x, y, w, h) 
+end
 
 function playdate.update()
 
@@ -46,33 +63,55 @@ function playdate.update()
 	-- Note that it is possible for more than one of these directions
 	-- to be pressed at once, if the user is pressing diagonally.
 
+	local crank = playdate.getCrankPosition()
+	local crankModify =  (spread * (crank / 360))
+	local buttonPressed = false
 	if playdate.buttonIsPressed( playdate.kButtonUp ) then
-		synth:playMIDINote(80, 1, 0.1)
+		if playdate.buttonIsPressed(playdate.kButtonA) then
+			baseNoteNoise += 1
+		elseif playdate.buttonIsPressed(playdate.kButtonB) then
+			baseNoteNoise -= 1
+		else
+			note = baseNoteNoise + crankModify 
+			synthNoise:playMIDINote(note, 1, 0.1)
+			draw()
+		end
 	end
 	if playdate.buttonIsPressed( playdate.kButtonRight ) then
-		synth:playMIDINote(60, 1, 0.1)
+		if playdate.buttonIsPressed(playdate.kButtonA) then
+			baseNoteSin += 1
+		elseif playdate.buttonIsPressed(playdate.kButtonB) then
+			baseNoteSin -= 1
+		else
+			note = baseNoteSin + crankModify 
+			synthSin:playMIDINote(note, 1, 0.1)
+			draw()
+		end
 	end
 	if playdate.buttonIsPressed( playdate.kButtonLeft ) then
-		synth:playMIDINote(70, 1, 0.1)
+		if playdate.buttonIsPressed(playdate.kButtonA) then
+			baseNoteSaw += 1
+		elseif playdate.buttonIsPressed(playdate.kButtonB) then
+			baseNoteSaw -= 1
+		else
+			note = baseNoteSaw + crankModify 
+			synthSaw:playMIDINote(note, 1, 0.1)
+			draw()
+		end
 	end
 	if playdate.buttonIsPressed( playdate.kButtonDown ) then
-		synth:playMIDINote(50, 1, 0.1)
+		if playdate.buttonIsPressed(playdate.kButtonA) then
+			baseNoteTriangle += 1
+		elseif playdate.buttonIsPressed(playdate.kButtonB) then
+			baseNoteTriangle -= 1
+		else
+			note = baseNoteTriangle + crankModify 
+			synthTriangle:playMIDINote(note, 1, 0.1)
+			draw()
+		end
 	end
-	-- if playdate.buttonIsPressed( playdate.kButtonRight ) then
-	-- 	playerSprite:moveBy( 2, 0 )
-	-- end
-	-- if playdate.buttonIsPressed( playdate.kButtonDown ) then
-	-- 	playerSprite:moveBy( 0, 2 )
-	-- end
-	-- if playdate.buttonIsPressed( playdate.kButtonLeft ) then
-	-- 	playerSprite:moveBy( -2, 0 )
-	-- end
 
-	-- Call the functions below in playdate.update() to draw sprites and keep
-	-- timers updated. (We aren't using timers in this example, but in most
-	-- average-complexity games, you will.)
 
-	-- gfx.sprite.update()
 	playdate.timer.updateTimers()
 
 end

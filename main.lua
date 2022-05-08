@@ -14,7 +14,16 @@ import "CoreLibs/timer"
 import "CoreLibs/nineslice"
 
 
-local channel = playdate.sound.channel.new()
+local spread = 12 -- one octave
+local baseNoteSin = 50 -- near middle c
+
+
+local synthSin = playdate.sound.synth.new()
+synthSin:setWaveform(playdate.sound.kWaveSine)
+
+-- local channel = playdate.sound.channel.new()
+-- channel:addEffect(delayLine)
+-- channel:addSource(synthSin)
 
 local delayLenSec = 5
 local levelHalf = 0.5 -- theoretically level is 0-100 cant find confirmation tho
@@ -24,12 +33,10 @@ delayLine:setFeedback(0.1)
 delayLine:addTap(0.3)
 delayLine:addTap(0.2)
 delayLine:addTap(0.1)
-channel:addEffect(delayLine)
+playdate.sound.addEffect(delayLine)
 
-local synthSin = playdate.sound.synth.new()
-synthSin:setWaveform(playdate.sound.kWaveSine)
 local sequence = playdate.sound.sequence.new()
-sequence:setTempo(4)
+sequence:setTempo(2)
 local track = playdate.sound.track.new()
 sequence:addTrack(track)
 track:setInstrument(synthSin)
@@ -145,7 +152,9 @@ function playdate.update()
 		if isStepActive then
 			stepRemove(track, column)
 		else
-			track:addNote(column, 50, 1)
+			local crank = playdate.getCrankPosition()
+			local crankModify =  (spread * (crank / 360))
+			track:addNote(column, baseNoteSin + crankModify, 1)
 		end
 	end
 	-- listview:drawInRect(220, 20, 160, 210)

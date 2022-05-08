@@ -66,10 +66,25 @@ ringmod:setFrequency(200)
 
 
 -- channel:addEffect(crush)
-channel:addEffect(delayLine)
+-- channel:addEffect(delayLine)
 -- channel:addEffect(overdrive)
 -- channel:addEffect(filter)
 -- channel:addEffect(ringmod)
+
+local sequence = playdate.sound.sequence.new()
+sequence:setTempo(4)
+local track = playdate.sound.track.new()
+sequence:addTrack(track)
+track:setInstrument(synthSin)
+track:addNote(0, 50, 1)
+track:addNote(1, 51, 1)
+track:addNote(2, 55, 1)
+track:addNote(3, 80, 1)
+
+sequence:setLoops(0, 3)
+sequence:play()
+
+
 
 local baseNoteSin = 50 -- near middle c
 local baseNoteTriangle = 50 -- near middle c

@@ -32,11 +32,44 @@ local synthTriangle = playdate.sound.synth.new()
 synthTriangle:setWaveform(playdate.sound.kWaveTriangle)
 channel:addSource(synthTriangle)
 
+local mixHalf = 0.5
 local crush = playdate.sound.bitcrusher.new()
-crush:setMix(60)
-crush:setAmount(.5)
-crush:setUndersampling(0.5)
-channel:addEffect(crush)
+crush:setMix(mixHalf)
+crush:setAmount(mixHalf)
+crush:setUndersampling(mixHalf)
+
+local delayLenSec = 5
+local levelHalf = 0.5 -- theoretically level is 0-100 cant find confirmation tho
+local delayLine = playdate.sound.delayline.new(.5)
+delayLine:setMix(0.7)
+delayLine:setFeedback(0.1)
+delayLine:addTap(0.3)
+delayLine:addTap(0.2)
+delayLine:addTap(0.1)
+-- delay taps
+
+local overdrive =playdate.sound.overdrive.new()
+overdrive:setMix(mixHalf)
+overdrive:setGain(levelHalf)
+overdrive:setLimit(levelHalf)
+
+local filter = playdate.sound.twopolefilter.new(playdate.sound.kFilterBandPass)
+filter:setMix(mixHalf)
+filter:setFrequency(200)
+filter:setResonance(mixHalf)
+-- filter:setGain()
+-- filter:setType()
+
+local ringmod = playdate.sound.ringmod.new()
+ringmod:setMix(mixHalf)
+ringmod:setFrequency(200)
+
+
+-- channel:addEffect(crush)
+channel:addEffect(delayLine)
+-- channel:addEffect(overdrive)
+-- channel:addEffect(filter)
+-- channel:addEffect(ringmod)
 
 local baseNoteSin = 50 -- near middle c
 local baseNoteTriangle = 50 -- near middle c
@@ -56,6 +89,15 @@ function draw()
 	playdate.graphics.drawRect(x, y, w, h) 
 end
 
+
+local noiseButton = playdate.kButtonUp
+local sawButton = playdate.kButtonLeft
+local sinButton = playdate.kButtonRight
+local triangleButton = playdate.kButtonDown
+
+local octaveUp = playdate.kButtonA
+local octaveDown = playdate.kButtonB
+
 function playdate.update()
 
 	-- Poll the d-pad and move our player accordingly.
@@ -66,49 +108,65 @@ function playdate.update()
 	local crank = playdate.getCrankPosition()
 	local crankModify =  (spread * (crank / 360))
 	local buttonPressed = false
-	if playdate.buttonIsPressed( playdate.kButtonUp ) then
-		if playdate.buttonIsPressed(playdate.kButtonA) then
-			baseNoteNoise += 1
-		elseif playdate.buttonIsPressed(playdate.kButtonB) then
-			baseNoteNoise -= 1
-		else
-			note = baseNoteNoise + crankModify 
-			synthNoise:playMIDINote(note, 1, 0.1)
-			draw()
-		end
+	
+	-- saw octave up and down
+	if (playdate.buttonIsPressed(octaveUp) and playdate.buttonJustPressed(sawButton)) then
+		baseNoteSaw += 12
 	end
-	if playdate.buttonIsPressed( playdate.kButtonRight ) then
-		if playdate.buttonIsPressed(playdate.kButtonA) then
-			baseNoteSin += 1
-		elseif playdate.buttonIsPressed(playdate.kButtonB) then
-			baseNoteSin -= 1
-		else
-			note = baseNoteSin + crankModify 
-			synthSin:playMIDINote(note, 1, 0.1)
-			draw()
-		end
+	
+	if (playdate.buttonIsPressed(octaveDown) and playdate.buttonJustPressed(sawButton)) then
+		baseNoteSaw -= 12
 	end
-	if playdate.buttonIsPressed( playdate.kButtonLeft ) then
-		if playdate.buttonIsPressed(playdate.kButtonA) then
-			baseNoteSaw += 1
-		elseif playdate.buttonIsPressed(playdate.kButtonB) then
-			baseNoteSaw -= 1
-		else
-			note = baseNoteSaw + crankModify 
-			synthSaw:playMIDINote(note, 1, 0.1)
-			draw()
-		end
+	
+	if (playdate.buttonJustPressed(sawButton) and not (playdate.buttonIsPressed(octaveUp) or playdate.buttonIsPressed(octaveDown))) then
+		note = baseNoteSaw + crankModify 
+		synthSaw:playMIDINote(note, 1, 0.1)
+		draw()
 	end
-	if playdate.buttonIsPressed( playdate.kButtonDown ) then
-		if playdate.buttonIsPressed(playdate.kButtonA) then
-			baseNoteTriangle += 1
-		elseif playdate.buttonIsPressed(playdate.kButtonB) then
-			baseNoteTriangle -= 1
-		else
-			note = baseNoteTriangle + crankModify 
-			synthTriangle:playMIDINote(note, 1, 0.1)
-			draw()
-		end
+	
+	-- triangle octave up and down
+	if (playdate.buttonJustPressed(octaveUp) and playdate.buttonJustPressed(triangleButton)) then
+		baseNoteTriangle += 12
+	end
+	
+	if (playdate.buttonJustPressed(octaveDown) and playdate.buttonJustPressed(triangleButton)) then
+		baseNoteTriangle -= 12
+	end
+	
+	if (playdate.buttonJustPressed(triangleButton) and not (playdate.buttonIsPressed(octaveUp) or playdate.buttonIsPressed(octaveDown))) then
+		note = baseNoteTriangle + crankModify 
+		synthTriangle:playMIDINote(note, 1, 0.1)
+		draw()
+	end
+	
+	-- noise octave up and down
+	if (playdate.buttonIsPressed(octaveUp) and playdate.buttonJustPressed(noiseButton)) then
+		baseNoteNoise += 12
+	end
+	
+	if (playdate.buttonIsPressed(octaveDown) and playdate.buttonJustPressed(noiseButton)) then
+		baseNoteNoise -= 12
+	end
+	
+	if (playdate.buttonJustPressed(noiseButton) and not (playdate.buttonIsPressed(octaveUp) or playdate.buttonIsPressed(octaveDown))) then
+		note = baseNoteNoise + crankModify 
+		synthNoise:playMIDINote(note, 1, 0.1)
+		draw()
+	end
+
+	-- sin octave up and down
+	if (playdate.buttonIsPressed(octaveUp) and playdate.buttonJustPressed(sinButton)) then
+		baseNoteSin += 12
+	end
+	
+	if (playdate.buttonIsPressed(octaveDown) and playdate.buttonJustPressed(sinButton)) then
+		baseNoteSin -= 12
+	end
+	
+	if (playdate.buttonJustPressed(sinButton) and not (playdate.buttonIsPressed(octaveUp) or playdate.buttonIsPressed(octaveDown))) then
+		note = baseNoteSin + crankModify 
+		synthSin:playMIDINote(note, 1, 0.1)
+		draw()
 	end
 
 

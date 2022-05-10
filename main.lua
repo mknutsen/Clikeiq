@@ -13,93 +13,6 @@ import "CoreLibs/ui"
 import "CoreLibs/timer"
 import "CoreLibs/nineslice"
 
-
-spread = 12 -- one octave
-baseNoteSin = 60 -- near middle c
-
-sequence = playdate.sound.sequence.new()
-trackTable = {}
---[[ NOT INTUITIVE
-instruments supercede synths even though theyre both sources.
-If i make an synth, add it to a channel, and then add the synth to an instrument
-the channel has no control over the instrument which has its own volume control.
-]]--
-
--- order is imoportant because the order they index in
--- getTrack is the order they appear in the section names
-
-function makeTrack(waveform)
-	local synth = playdate.sound.synth.new()
-	synth:setWaveform(waveform)
-	local track = playdate.sound.track.new()
-	local instrument = playdate.sound.instrument.new()
-	instrument:addVoice(synth)
-	track:setInstrument(instrument)
-	sequence:addTrack(track)
-	local channel = playdate.sound.channel.new()
-	channel:addSource(instrument)
-end
-
-
-
-synthSaw = playdate.sound.synth.new()
-synthSaw:setWaveform(playdate.sound.kWaveSaw)
-trackSaw = playdate.sound.track.new()
-instrumentSaw = playdate.sound.instrument.new()
-instrumentSaw:addVoice(synthSaw)
-trackSaw:setInstrument(instrumentSaw)
-sequence:addTrack(trackSaw)
-channelSaw = playdate.sound.channel.new()
-channelSaw:addSource(instrumentSaw)
-
-synthTriangle = playdate.sound.synth.new()
-synthTriangle:setWaveform(playdate.sound.kWaveTriangle)
-trackTriangle = playdate.sound.track.new()
-instrumentTriangle = playdate.sound.instrument.new()
-instrumentTriangle:addVoice(synthTriangle)
-trackTriangle:setInstrument(instrumentTriangle)
-sequence:addTrack(trackTriangle)
-channelTriangle = playdate.sound.channel.new()
-channelTriangle:addSource(instrumentTriangle)
-
-synthNoise = playdate.sound.synth.new()
-synthNoise:setWaveform(playdate.sound.kWaveNoise)
-trackNoise = playdate.sound.track.new()
-instrumentNoise = playdate.sound.instrument.new()
-instrumentNoise:addVoice(synthNoise)
-trackNoise:setInstrument(instrumentNoise)
-sequence:addTrack(trackNoise)
-channelNoise = playdate.sound.channel.new()
-channelNoise:addSource(instrumentNoise)
-
-
-
--- channel = playdate.sound.channel.new()
--- channel:addEffect(delayLine)
--- channel:addSource(synthSin)
-
-delayLenSec = 5
-levelHalf = 0.5 -- theoretically level is 0-100 cant find confirmation tho
-delayLine = playdate.sound.delayline.new(.3)
-delayLine:setMix(0.5)
-delayLine:setFeedback(0.1)
--- delayLine:addTap(0.3)
-delayLine:addTap(0.2)
-delayLine:addTap(0.1)
--- channelNoise:addEffect(delayLine)playdate.sound.addEffect(delayLine)
--- instrumentNoise:addEffect(delayLine)/
-
-
-filter = playdate.sound.twopolefilter.new(playdate.sound.kFilterLowPass)
-filter:setMix(.8)
-filter:setFrequency(600)
-filter:setResonance(0.5)
-playdate.sound.addEffect(filter)
-
-sequence:setTempo(2)
-sequence:setLoops(1, 8)
-sequence:play()
-
 function dump(o)
    if type(o) == 'table' then
 	  local s = '{ '
@@ -135,6 +48,91 @@ baseNoteTable[2] = 50
 baseNoteTable[3] = 50
 baseNoteTable[4] = 50
 
+trackWaveformTable = {}
+trackWaveformTable[1] = playdate.sound.synth.new(playdate.sound.kWaveSine)
+trackWaveformTable[2] = playdate.sound.synth.new(playdate.sound.kWaveSawtooth)
+trackWaveformTable[3] = playdate.sound.synth.new(playdate.sound.kWaveTriangle)
+trackWaveformTable[4] = playdate.sound.synth.new(playdate.sound.kWaveNoise)
+
+SYNTH_STR = "SYNTH"
+TRACK_STR = "TRACK"
+INSTRUMENT_STR = "INSTRUMENT"
+CHANNEL_STR = "CHANNEL"
+DELAY_STR = "DEL"
+OVERDRIVE_STR = "OD"
+UNIPOLE_FILTER_STR = "1F"
+BIPOLAR_FILTER_STR = "2F"
+BITCRUSH_STR = "BC"
+RINGMOD_STR = "RING"
+
+spread = 12 -- one octave
+baseNoteSin = 60 -- near middle c
+
+sequence = playdate.sound.sequence.new()
+trackTable = {}
+--[[ NOT INTUITIVE
+instruments supercede synths even though theyre both sources.
+If i make an synth, add it to a channel, and then add the synth to an instrument
+the channel has no control over the instrument which has its own volume control.
+]]--
+
+-- order is imoportant because the order they index in
+-- getTrack is the order they appear in the section names
+
+function makeTrack(number)
+	trackTable[number] = {}
+	trackTable[number][SYNTH_STR] = trackWaveformTable[number]
+	trackTable[number][TRACK_STR] = playdate.sound.track.new()
+	trackTable[number][INSTRUMENT_STR] = playdate.sound.instrument.new()
+	trackTable[number][INSTRUMENT_STR]:addVoice(trackTable[number][SYNTH_STR])
+	trackTable[number][TRACK_STR]:setInstrument(trackTable[number][INSTRUMENT_STR])
+	trackTable[number][CHANNEL_STR] = playdate.sound.channel.new()
+	trackTable[number][CHANNEL_STR]:addSource(trackTable[number][INSTRUMENT_STR])
+	
+	trackTable[number][BITCRUSH_STR] = playdate.sound.bitcrusher.new()
+	trackTable[number][BITCRUSH_STR]:setMix(0)
+	trackTable[number][BITCRUSH_STR]:setAmount(0.5)
+	trackTable[number][BITCRUSH_STR]:setUndersampling(0.5)
+	trackTable[number][CHANNEL_STR]:addEffect(trackTable[number][BITCRUSH_STR])
+	
+	trackTable[number][DELAY_STR] = playdate.sound.delayline.new(.5)
+	trackTable[number][DELAY_STR]:setMix(0)
+	trackTable[number][DELAY_STR]:setFeedback(0.1)
+	trackTable[number][DELAY_STR]:addTap(0.3)
+	trackTable[number][DELAY_STR]:addTap(0.2)
+	trackTable[number][DELAY_STR]:addTap(0.1)
+	trackTable[number][CHANNEL_STR]:addEffect(trackTable[number][DELAY_STR])
+	
+	trackTable[number][OVERDRIVE_STR] = playdate.sound.overdrive.new()
+	trackTable[number][OVERDRIVE_STR]:setMix(0)
+	trackTable[number][OVERDRIVE_STR]:setGain(0.5)
+	trackTable[number][OVERDRIVE_STR]:setLimit(0.5)
+	trackTable[number][CHANNEL_STR]:addEffect(trackTable[number][OVERDRIVE_STR])
+	
+	trackTable[number][BIPOLAR_FILTER_STR] = playdate.sound.twopolefilter.new(playdate.sound.kFilterBandPass)
+	trackTable[number][BIPOLAR_FILTER_STR]:setMix(0)
+	trackTable[number][BIPOLAR_FILTER_STR]:setFrequency(200)
+	trackTable[number][BIPOLAR_FILTER_STR]:setResonance(0.5)
+	trackTable[number][CHANNEL_STR]:addEffect(trackTable[number][BIPOLAR_FILTER_STR])
+	
+	trackTable[number][RINGMOD_STR] = playdate.sound.ringmod.new()
+	trackTable[number][RINGMOD_STR]:setMix(0)
+	trackTable[number][RINGMOD_STR]:setFrequency(200)
+	trackTable[number][CHANNEL_STR]:addEffect(trackTable[number][RINGMOD_STR])
+	
+	sequence:addTrack(trackTable[number][TRACK_STR])
+end
+
+makeTrack(1)
+makeTrack(2)
+makeTrack(3)
+makeTrack(4)
+
+sequence:setTempo(2)
+sequence:setLoops(1, 8)
+sequence:play()
+
+
 function settingsButton(section, column)
 	local track = getTrack(section)
 	if column == 1 then -- octave down
@@ -142,12 +140,17 @@ function settingsButton(section, column)
 	elseif column == 2 then -- octave up
 		baseNoteTable[section] += 12
 	elseif column == 3 then -- add delay
+		trackTable[section][DELAY_STR]:setMix(0.5)
 	elseif column == 4 then -- add overdrive
+		trackTable[section][OVERDRIVE_STR]:setMix(0.5)
 	elseif column == 5 then -- add unipolar filter
+		-- trackTable[section][DELAY_STR]:setMix(0.5) TO COMPLETE	
 	elseif column == 6 then -- add bipolar filter
+		trackTable[section][BIPOLAR_FILTER_STR]:setMix(0.5)
 	elseif column == 7 then -- add bitcrush
+		trackTable[section][BITCRUSH_STR]:setMix(0.5)
 	elseif column == 8 then -- add ring mod
-		
+		trackTable[section][RINGMOD_STR]:setMix(0.5)
 	end
 	
 end

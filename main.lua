@@ -18,30 +18,59 @@ spread = 12 -- one octave
 baseNoteSin = 60 -- near middle c
 
 sequence = playdate.sound.sequence.new()
+trackTable = {}
+--[[ NOT INTUITIVE
+instruments supercede synths even though theyre both sources.
+If i make an synth, add it to a channel, and then add the synth to an instrument
+the channel has no control over the instrument which has its own volume control.
+]]--
 
-synthNoise = playdate.sound.synth.new()
-synthNoise:setWaveform(playdate.sound.kWaveNoise)
-trackNoise = playdate.sound.track.new()
-trackNoise:setInstrument(synthNoise)
-sequence:addTrack(trackNoise)
+-- order is imoportant because the order they index in
+-- getTrack is the order they appear in the section names
 
-synthSin = playdate.sound.synth.new()
-synthSin:setWaveform(playdate.sound.kWaveSine)
-trackSin = playdate.sound.track.new()
-trackSin:setInstrument(synthSin)
-sequence:addTrack(trackSin)
+function makeTrack(waveform)
+	local synth = playdate.sound.synth.new()
+	synth:setWaveform(waveform)
+	local track = playdate.sound.track.new()
+	local instrument = playdate.sound.instrument.new()
+	instrument:addVoice(synth)
+	track:setInstrument(instrument)
+	sequence:addTrack(track)
+	local channel = playdate.sound.channel.new()
+	channel:addSource(instrument)
+end
+
+
 
 synthSaw = playdate.sound.synth.new()
-synthSaw:setWaveform(playdate.sound.kWaveSawtooth)
+synthSaw:setWaveform(playdate.sound.kWaveSaw)
 trackSaw = playdate.sound.track.new()
-trackSaw:setInstrument(synthSaw)
+instrumentSaw = playdate.sound.instrument.new()
+instrumentSaw:addVoice(synthSaw)
+trackSaw:setInstrument(instrumentSaw)
 sequence:addTrack(trackSaw)
+channelSaw = playdate.sound.channel.new()
+channelSaw:addSource(instrumentSaw)
 
 synthTriangle = playdate.sound.synth.new()
 synthTriangle:setWaveform(playdate.sound.kWaveTriangle)
 trackTriangle = playdate.sound.track.new()
-trackTriangle:setInstrument(synthTriangle)
+instrumentTriangle = playdate.sound.instrument.new()
+instrumentTriangle:addVoice(synthTriangle)
+trackTriangle:setInstrument(instrumentTriangle)
 sequence:addTrack(trackTriangle)
+channelTriangle = playdate.sound.channel.new()
+channelTriangle:addSource(instrumentTriangle)
+
+synthNoise = playdate.sound.synth.new()
+synthNoise:setWaveform(playdate.sound.kWaveNoise)
+trackNoise = playdate.sound.track.new()
+instrumentNoise = playdate.sound.instrument.new()
+instrumentNoise:addVoice(synthNoise)
+trackNoise:setInstrument(instrumentNoise)
+sequence:addTrack(trackNoise)
+channelNoise = playdate.sound.channel.new()
+channelNoise:addSource(instrumentNoise)
 
 
 
@@ -57,7 +86,8 @@ delayLine:setFeedback(0.1)
 -- delayLine:addTap(0.3)
 delayLine:addTap(0.2)
 delayLine:addTap(0.1)
-playdate.sound.addEffect(delayLine)
+-- channelNoise:addEffect(delayLine)playdate.sound.addEffect(delayLine)
+-- instrumentNoise:addEffect(delayLine)/
 
 
 filter = playdate.sound.twopolefilter.new(playdate.sound.kFilterLowPass)
@@ -94,10 +124,10 @@ settingsRowNameTable[7] = "BC"
 settingsRowNameTable[8] = "RING"
 
 sectionNameTable = {}
-sectionNameTable[1] = "Noise"
-sectionNameTable[2] = "Sin"
-sectionNameTable[3] = "Saw"
-sectionNameTable[4] = "Triangle"
+sectionNameTable[1] = "Sin"
+sectionNameTable[2] = "Saw"
+sectionNameTable[3] = "Triangle"
+sectionNameTable[4] = "Noise"
 
 baseNoteTable = {}
 baseNoteTable[1] = 50

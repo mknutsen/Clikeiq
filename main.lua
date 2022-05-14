@@ -49,6 +49,50 @@ settingsRowNameTable[7] = "BC"
 settingsRowNameTable[8] = "RING"
 settingsRowNameTable[9] = "BPM" -- will be global
 
+bitCrusherRowNameTable = {}
+bitCrusherRowNameTable[1] = "setMix"
+bitCrusherRowNameTable[2] = "setAmount"
+bitCrusherRowNameTable[3] = "setUndersampling"
+
+overdriveRowNameTable = {}
+overdriveRowNameTable[1] = "Mix"
+overdriveRowNameTable[2] = "Gain"
+overdriveRowNameTable[3] = "Limit"
+overdriveRowNameTable[4] = "Offset"
+
+unipolarFilterRowNameTable = {}
+unipolarFilterRowNameTable[1] = "Mix"
+unipolarFilterRowNameTable[2] = "Freq"
+
+bipolarFilterRowNameTable = {}
+bipolarFilterRowNameTable[1] = "Type"
+bipolarFilterRowNameTable[2] = "Mix"
+bipolarFilterRowNameTable[3] = "Frequency"
+bipolarFilterRowNameTable[4] = "Resonance"
+bipolarFilterRowNameTable[5] = "Gain"
+
+ringModulatorRowNameTable = {}
+ringModulatorRowNameTable[1] = "Mix"
+ringModulatorRowNameTable[2] = "Frequency"
+
+delayRowNameTable = {}
+delayRowNameTable[1] = "Mix"
+delayRowNameTable[2] = "Tap"
+delayRowNameTable[3] = "Feedback"
+
+octaveRowNameTable = {}
+octaveRowNameTable[1] = "-"
+octaveRowNameTable[2] = "+"
+
+filterTypes = {}
+filterTypes[1] = playdate.sound.kFilterLowPass
+filterTypes[2] = playdate.sound.kFilterHighPass
+filterTypes[3] = playdate.sound.kFilterBandPass
+filterTypes[4] = playdate.sound.kFilterNotch
+filterTypes[5] = playdate.sound.kFilterPEQ
+filterTypes[6] = playdate.sound.kFilterLowShelf
+filterTypes[7] = playdate.sound.kFilterHighShelf
+
 -- this is the order of keys that will generally be used
 -- note lua generally doesn't zero index this isn't my fault
 
@@ -65,6 +109,7 @@ RINGMOD_STR = "RING"
 STATE_STR = "STATE"
 NOTE_STR = "NOTE"
 NAME_STR = "NAME"
+EFFECTS_SETTINGS_STR = "FX"
 
 spread = 12 -- one octave
 baseNoteSin = 60 -- near middle c
@@ -87,6 +132,17 @@ function makeTrack(number)
 	trackTable[number][STATE_STR] = 1
 	-- set note to middle c
 	trackTable[number][NOTE_STR] = 60
+	
+	trackTable[number][EFFECTS_SETTINGS_STR] = {}
+	trackTable[number][EFFECTS_SETTINGS_STR][1] = {  } -- SEQ
+	trackTable[number][EFFECTS_SETTINGS_STR][2] = { 0 } -- OCT
+	trackTable[number][EFFECTS_SETTINGS_STR][3] = { 0,0,0 } -- DEL
+	trackTable[number][EFFECTS_SETTINGS_STR][4] = { 0,0,0 } -- OD
+	trackTable[number][EFFECTS_SETTINGS_STR][5] = { 0,0,0,0 } -- 1F
+	trackTable[number][EFFECTS_SETTINGS_STR][6] = { 0,0 } -- 2F
+	trackTable[number][EFFECTS_SETTINGS_STR][7] = { 0,0,0,0,0 } -- BC
+	trackTable[number][EFFECTS_SETTINGS_STR][8] = { 0,0 } -- RING
+	trackTable[number][EFFECTS_SETTINGS_STR][9] = { 0,0,0 } -- BPM
 	
 	trackTable[number][TRACK_STR] = playdate.sound.track.new()
 	trackTable[number][INSTRUMENT_STR] = playdate.sound.instrument.new()
@@ -129,9 +185,13 @@ function makeTrack(number)
 	sequence:addTrack(trackTable[number][TRACK_STR])
 end
 
-function getCrankModify()
+function getCrankPos()
 	local crank = playdate.getCrankPosition()
-	return  (spread * (crank / 360))
+	return (crank / 360)
+end
+
+function getCrankModify()
+	return getCrankPos() * spread
 end
 
 function main()
@@ -169,16 +229,11 @@ function main()
 			if row == 1 then
 				settingsButton(section, column)
 			elseif row == 2 then
-				local track = getTrack(section)
-				local isStepActive = stepActive(track, column)
-				if isStepActive then
-					stepRemove(track, column)
-				else
-					local noteToPlay = trackTable[section][NOTE_STR] + getCrankModify()
-					track:addNote(column, noteToPlay , 1)
-				end
+				rowTwoButton(section, column)
 			end
+			print("UPDATING")
 			needsRedrawBool= true
+			playdate.update()
 		end,
 		
 		BButtonUp = function()
@@ -200,6 +255,19 @@ function main()
 		upButtonUp = function()
 			gridview:selectPreviousRow(false)
 		end,
+		
+		cranked = function (change, acceleratedChange)
+			print("grapnks")
+			local section, row, column = gridview:getSelection()
+			local crank = getCrankPos()
+			if row == 2 then
+				local state = trackTable[section][STATE_STR]
+				trackTable[section][EFFECTS_SETTINGS_STR][state][column] = crank
+				needsRedrawBool= true
+				playdate.update()
+			end
+			
+		end
 	}
 	
 	-- add input handlers to global state
@@ -207,17 +275,113 @@ function main()
 	-- run the sequence
 	sequence:play()
 end
+function rowTwoButton(section, column)
+	local state <const> = trackTable[section][STATE_STR]
+	local crank <const> = getCrankPos()
+	
+	if state == 1 then --SEQ
+		local track = getTrack(section)
+		local isStepActive = stepActive(track, column)
+		if isStepActive then
+			stepRemove(track, column)
+		else
+			local noteToPlay = trackTable[section][NOTE_STR] + crank * 12
+			track:addNote(column, noteToPlay , 1)
+		end
+		
+	elseif state == 2 then --OCT
+		if column == 1 then
+			trackTable[section][NOTE_STR] -= 12
+		
+		elseif column == 2 then
+			trackTable[section][NOTE_STR] += 12
+		end
+	elseif state == 3 then --DEL
+		
+		if column == 1 then -- 1 Mix
+		end
+		if column == 2 then -- 2 Tap
+		end
+		if column == 3 then -- 3 Feedback
+		end
+			
+	elseif state == 4 then -- OD
+		
+		-- overdriveRowNameTable = {}
+		if column == 1 then -- 1 Mix
+			trackTable[section][OVERDRIVE_STR]:setMix(crank)
+		end
+		if column == 2 then -- 2 Gain
+			trackTable[section][OVERDRIVE_STR]:setGain(crank)
+		end
+		if column == 3 then -- 3 Limit
+			trackTable[section][OVERDRIVE_STR]:setLimit(crank)
+		end
+		if column == 4 then -- 4 Offset
+			trackTable[section][OVERDRIVE_STR]:setOffset(crank)
+		end
+	elseif state == 5 then -- 1F
+		
+	elseif state == 6 then -- 2F
+		if column == 1 then -- 1 Type
+			local typeSelected <const> = filterTypes[1 + math.floor(crank * 6)]
+			trackTable[section][BIPOLAR_FILTER_STR]:setType(typeSelected)
 
+		end
+		if column == 2 then -- 2 Mix
+			trackTable[section][BIPOLAR_FILTER_STR]:setMix(crank)
+		end
+		if column == 3 then -- 3 Frequency
+			trackTable[section][BIPOLAR_FILTER_STR]:setFrequency(crank)
+		end
+		if column == 4 then -- 4 Resonance
+			trackTable[section][BIPOLAR_FILTER_STR]:setResonance(crank)
+		end
+		if column == 5 then -- 5 Gain
+			trackTable[section][BIPOLAR_FILTER_STR]:setGain(crank)
+		end
+		
+	elseif state == 7 then -- BC
+		
+		-- bitCrusherRowNameTable = {}
+		if column == 1 then -- 1 setMix
+			trackTable[section][BITCRUSH_STR]:setMix(crank)
+		end
+		if column == 2 then -- 2 setAmount
+			trackTable[section][BITCRUSH_STR]:setAmount(crank)
+		end
+		if column == 3 then -- 3 setUndersampling
+			trackTable[section][BITCRUSH_STR]:setUndersampling(crank)
+		end
+		
+	elseif state == 8 then -- RING
+		
+		if column == 1 then -- 1 Mix
+		end
+		if column == 2 then -- 2 Frequency
+		end
+		
+	elseif state == 9 then -- BPM
+		
+	end
+	
+end
 
 function settingsButton(section, column)
 	trackTable[section][STATE_STR] = column
 	needsRedrawBool = true
+	playdate.update()
 end
 
 function stepActive(track, step)
 	local notes = track:getNotes(step)
 	return not (next(notes) == nil)
 end
+
+function getStep(track, step)
+	return track:getNotes(step)
+end
+	
 
 function getSectionName(sectionNumber)
 	return trackTable[sectionNumber][NAME_STR]
@@ -242,13 +406,16 @@ function stepRemove(track, step)
 	track:setNotes(notes)	
 end
 
+function makeFillPattern(fillPercent)
+	local value = math.floor(0xff - (0xff * fillPercent))
+	-- print(dump({ value,value,value,value,value,value,value,value, }))
+	return { value,value,value,value,value,value,value,value, }
+end
 
 function gridview:drawCell(section, row, column, selected, x, y, width, height)
 	local isStepActive = false
-	if row == 2 then
-		local track = getTrack(section)
-		isStepActive = stepActive(track, column)
-	end
+	local track = getTrack(section)
+	local state = trackTable[section][STATE_STR]
 	
 	local xMod = 4
 	local widthMod = -8
@@ -259,18 +426,63 @@ function gridview:drawCell(section, row, column, selected, x, y, width, height)
 		widthMod = 4
 		z = 3
 	end
-	if isStepActive then
-		playdate.graphics.setPattern({ 0xaa, 0x55, 0xaa, 0x55, 0xaa, 0x55, 0xaa, 0x55 })
-		playdate.graphics.fillCircleInRect(x + xMod, y + xMod, width + widthMod, height + widthMod, z)
-		playdate.graphics.setColor(playdate.graphics.kColorBlack)
-	else
-		playdate.graphics.drawCircleInRect(x + xMod, y + xMod, width + widthMod, height + widthMod, z)
-	end
-	local cellText = ""..row.."-"..column
+	
+	local fillPercent = 0
+	cellText = " "
+	print("412", cellText)
+
 	if row == 1 then
 		cellText = settingsRowNameTable[column]
+		print("415", cellText)
+	elseif row == 2 then
+		if state == 1 then --SEQ
+			local notes = track:getNotes(column)
+			if (notes ~= nil and notes[1] ~= nil) then
+				local note = notes[1]["note"]
+				local high = 70
+				local low = 30
+				fillPercent =  (note - low) / (high - low)
+			end
+			cellText = ""..row.."-"..column
+			print("444", cellText)
+			tableSelected = {}
+		elseif state == 2 then --OCT
+			tableSelected = octaveRowNameTable
+			tableSelected[3] = ""..trackTable[section][NOTE_STR].."-"
+			
+		elseif state == 3 then --DEL
+			tableSelected = delayRowNameTable
+				
+		elseif state == 4 then -- OD
+			tableSelected = overdriveRowNameTable
+				
+		elseif state == 5 then -- 1F
+			tableSelected = unipolarFilterRowNameTable
+		elseif state == 6 then -- 2F
+			tableSelected = bipolarFilterRowNameTable
+		elseif state == 7 then -- BC
+			tableSelected = bitCrusherRowNameTable
+		elseif state == 8 then -- RING
+			tableSelected = ringModulatorRowNameTable
+		elseif state == 9 then -- BPM
+			-- tableSelected = ringModulatorRowNameTable
+		end
+		if  tableSelected ~= nil and tableSelected[column] ~= nil then
+			cellText = tableSelected[column]
+			print("445", cellText, trackTable[section][EFFECTS_SETTINGS_STR][state][column])
+			if trackTable[section][EFFECTS_SETTINGS_STR][state][column] ~= nil then
+				print("fill percent", trackTable[section][EFFECTS_SETTINGS_STR][state][column])
+				fillPercent = trackTable[section][EFFECTS_SETTINGS_STR][state][column]
+			end
+		end
 	end
+	
+	playdate.graphics.setPattern(makeFillPattern(fillPercent))
+	playdate.graphics.fillCircleInRect(x + xMod, y + xMod, width + widthMod, height + widthMod, z)
+	playdate.graphics.setColor(playdate.graphics.kColorBlack)
+	playdate.graphics.drawCircleInRect(x + xMod, y + xMod, width + widthMod, height + widthMod, z)
 	playdate.graphics.drawTextInRect(cellText, x, y+14, width, 20, nil, nil, kTextAlignment.center)
+	print(section, row, column, cellText)
 end
 
 function gridview:drawSectionHeader(section, x, y, width, height)

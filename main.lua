@@ -157,12 +157,8 @@ function makeTrack(number)
 	trackTable[number][BITCRUSH_STR]:setUndersampling(0.5)
 	trackTable[number][CHANNEL_STR]:addEffect(trackTable[number][BITCRUSH_STR])
 	
-	trackTable[number][DELAY_STR] = playdate.sound.delayline.new(.5)
+	trackTable[number][DELAY_STR] = playdate.sound.delayline.new(1)
 	trackTable[number][DELAY_STR]:setMix(0)
-	trackTable[number][DELAY_STR]:setFeedback(0.1)
-	trackTable[number][DELAY_STR]:addTap(0.3)
-	trackTable[number][DELAY_STR]:addTap(0.2)
-	trackTable[number][DELAY_STR]:addTap(0.1)
 	trackTable[number][CHANNEL_STR]:addEffect(trackTable[number][DELAY_STR])
 	
 	trackTable[number][OVERDRIVE_STR] = playdate.sound.overdrive.new()
@@ -255,19 +251,6 @@ function main()
 		upButtonUp = function()
 			gridview:selectPreviousRow(false)
 		end,
-		
-		cranked = function (change, acceleratedChange)
-			print("grapnks")
-			local section, row, column = gridview:getSelection()
-			local crank = getCrankPos()
-			if row == 2 then
-				local state = trackTable[section][STATE_STR]
-				trackTable[section][EFFECTS_SETTINGS_STR][state][column] = crank
-				needsRedrawBool= true
-				playdate.update()
-			end
-			
-		end
 	}
 	
 	-- add input handlers to global state
@@ -299,10 +282,16 @@ function rowTwoButton(section, column)
 	elseif state == 3 then --DEL
 		
 		if column == 1 then -- 1 Mix
+			trackTable[section][DELAY_STR]:setMix(crank)
+			trackTable[section][EFFECTS_SETTINGS_STR][state][column] = crank
 		end
 		if column == 2 then -- 2 Tap
+			trackTable[section][OVERDRIVE_STR]:addTap(crank)
+			trackTable[section][EFFECTS_SETTINGS_STR][state][column] = 1
 		end
 		if column == 3 then -- 3 Feedback
+			trackTable[section][OVERDRIVE_STR]:setFeedback(level)(crank)
+			trackTable[section][EFFECTS_SETTINGS_STR][state][column] = crank
 		end
 			
 	elseif state == 4 then -- OD
@@ -310,35 +299,53 @@ function rowTwoButton(section, column)
 		-- overdriveRowNameTable = {}
 		if column == 1 then -- 1 Mix
 			trackTable[section][OVERDRIVE_STR]:setMix(crank)
+			trackTable[section][EFFECTS_SETTINGS_STR][state][column] = crank
 		end
 		if column == 2 then -- 2 Gain
 			trackTable[section][OVERDRIVE_STR]:setGain(crank)
+			trackTable[section][EFFECTS_SETTINGS_STR][state][column] = crank
 		end
 		if column == 3 then -- 3 Limit
 			trackTable[section][OVERDRIVE_STR]:setLimit(crank)
+			trackTable[section][EFFECTS_SETTINGS_STR][state][column] = crank
 		end
 		if column == 4 then -- 4 Offset
 			trackTable[section][OVERDRIVE_STR]:setOffset(crank)
+			trackTable[section][EFFECTS_SETTINGS_STR][state][column] = crank
 		end
 	elseif state == 5 then -- 1F
+		
+		if column == 1 then -- 1 mix
+			trackTable[section][UNIPOLE_FILTER_STR]:setMix(crank)
+			trackTable[section][EFFECTS_SETTINGS_STR][state][column] = crank
+			
+		elseif column == 1 then -- 1 parameter
+			trackTable[section][UNIPOLE_FILTER_STR]:setParameter(4000 * crank)
+			trackTable[section][EFFECTS_SETTINGS_STR][state][column] = crank
+		end
 		
 	elseif state == 6 then -- 2F
 		if column == 1 then -- 1 Type
 			local typeSelected <const> = filterTypes[1 + math.floor(crank * 6)]
 			trackTable[section][BIPOLAR_FILTER_STR]:setType(typeSelected)
+			trackTable[section][EFFECTS_SETTINGS_STR][state][column] = crank
 
 		end
 		if column == 2 then -- 2 Mix
 			trackTable[section][BIPOLAR_FILTER_STR]:setMix(crank)
+			trackTable[section][EFFECTS_SETTINGS_STR][state][column] = crank
 		end
 		if column == 3 then -- 3 Frequency
-			trackTable[section][BIPOLAR_FILTER_STR]:setFrequency(crank)
+			trackTable[section][BIPOLAR_FILTER_STR]:setFrequency(crank * 4000)
+			trackTable[section][EFFECTS_SETTINGS_STR][state][column] = crank
 		end
 		if column == 4 then -- 4 Resonance
 			trackTable[section][BIPOLAR_FILTER_STR]:setResonance(crank)
+			trackTable[section][EFFECTS_SETTINGS_STR][state][column] = crank
 		end
 		if column == 5 then -- 5 Gain
 			trackTable[section][BIPOLAR_FILTER_STR]:setGain(crank)
+			trackTable[section][EFFECTS_SETTINGS_STR][state][column] = crank
 		end
 		
 	elseif state == 7 then -- BC
@@ -346,19 +353,26 @@ function rowTwoButton(section, column)
 		-- bitCrusherRowNameTable = {}
 		if column == 1 then -- 1 setMix
 			trackTable[section][BITCRUSH_STR]:setMix(crank)
+			trackTable[section][EFFECTS_SETTINGS_STR][state][column] = crank
 		end
 		if column == 2 then -- 2 setAmount
 			trackTable[section][BITCRUSH_STR]:setAmount(crank)
+			trackTable[section][EFFECTS_SETTINGS_STR][state][column] = crank
 		end
 		if column == 3 then -- 3 setUndersampling
 			trackTable[section][BITCRUSH_STR]:setUndersampling(crank)
+			trackTable[section][EFFECTS_SETTINGS_STR][state][column] = crank
 		end
 		
 	elseif state == 8 then -- RING
 		
 		if column == 1 then -- 1 Mix
+			trackTable[section][RINGMOD_STR]:setMix(crank)
+			trackTable[section][EFFECTS_SETTINGS_STR][state][column] = crank
 		end
 		if column == 2 then -- 2 Frequency
+			trackTable[section][RINGMOD_STR]:setFrequency(crank * 4000)
+			trackTable[section][EFFECTS_SETTINGS_STR][state][column] = crank
 		end
 		
 	elseif state == 9 then -- BPM
@@ -412,6 +426,10 @@ function makeFillPattern(fillPercent)
 	return { value,value,value,value,value,value,value,value, }
 end
 
+function percent(amount, low, high)
+	return (amount - low) / (high - low)
+end
+
 function gridview:drawCell(section, row, column, selected, x, y, width, height)
 	local isStepActive = false
 	local track = getTrack(section)
@@ -438,10 +456,7 @@ function gridview:drawCell(section, row, column, selected, x, y, width, height)
 		if state == 1 then --SEQ
 			local notes = track:getNotes(column)
 			if (notes ~= nil and notes[1] ~= nil) then
-				local note = notes[1]["note"]
-				local high = 70
-				local low = 30
-				fillPercent =  (note - low) / (high - low)
+				fillPercent =  percent(notes[1]["note"], 30, 70)
 			end
 			cellText = ""..row.."-"..column
 			print("444", cellText)

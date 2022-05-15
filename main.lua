@@ -50,9 +50,9 @@ settingsRowNameTable[8] = "RING"
 settingsRowNameTable[9] = "BPM" -- will be global
 
 bitCrusherRowNameTable = {}
-bitCrusherRowNameTable[1] = "setMix"
-bitCrusherRowNameTable[2] = "setAmount"
-bitCrusherRowNameTable[3] = "setUndersampling"
+bitCrusherRowNameTable[1] = "mix"
+bitCrusherRowNameTable[2] = "amount"
+bitCrusherRowNameTable[3] = "under"
 
 overdriveRowNameTable = {}
 overdriveRowNameTable[1] = "Mix"
@@ -140,7 +140,7 @@ function makeTrack(number)
 	trackTable[number][EFFECTS_SETTINGS_STR][4] = { 0,0,0 } -- OD
 	trackTable[number][EFFECTS_SETTINGS_STR][5] = { 0,0,0,0 } -- 1F
 	trackTable[number][EFFECTS_SETTINGS_STR][6] = { 0,0 } -- 2F
-	trackTable[number][EFFECTS_SETTINGS_STR][7] = { 0,0,0,0,0 } -- BC
+	trackTable[number][EFFECTS_SETTINGS_STR][7] = { 0,0,0 } -- BC
 	trackTable[number][EFFECTS_SETTINGS_STR][8] = { 0,0 } -- RING
 	trackTable[number][EFFECTS_SETTINGS_STR][9] = { 0,0,0 } -- BPM
 	
@@ -157,8 +157,9 @@ function makeTrack(number)
 	trackTable[number][BITCRUSH_STR]:setUndersampling(0.5)
 	trackTable[number][CHANNEL_STR]:addEffect(trackTable[number][BITCRUSH_STR])
 	
-	trackTable[number][DELAY_STR] = playdate.sound.delayline.new(1)
+	trackTable[number][DELAY_STR] = playdate.sound.delayline.new(.5)
 	trackTable[number][DELAY_STR]:setMix(0)
+	trackTable[number][DELAY_STR]:setFeedback(0.1)
 	trackTable[number][CHANNEL_STR]:addEffect(trackTable[number][DELAY_STR])
 	
 	trackTable[number][OVERDRIVE_STR] = playdate.sound.overdrive.new()
@@ -232,7 +233,7 @@ function main()
 			elseif row == 2 then
 				rowTwoButton(section, column)
 			end
-			print("UPDATING")
+			-- print("UPDATING")
 			needsRedrawBool= true
 		end,
 		
@@ -265,6 +266,7 @@ end
 function rowTwoButton(section, column)
 	local state <const> = trackTable[section][STATE_STR]
 	local crank <const> = getCrankPos()
+	-- print("crank", crank)
 	
 	if state == 1 then --SEQ
 		local track = getTrack(section)
@@ -294,7 +296,7 @@ function rowTwoButton(section, column)
 			trackTable[section][EFFECTS_SETTINGS_STR][state][column] = 1
 		end
 		if column == 3 then -- 3 Feedback
-			trackTable[section][DELAY_STR]:setFeedback(level)(crank)
+			trackTable[section][DELAY_STR]:setFeedback(crank)
 			trackTable[section][EFFECTS_SETTINGS_STR][state][column] = crank
 		end
 			
@@ -387,6 +389,8 @@ end
 
 function settingsButton(section, column)
 	trackTable[section][STATE_STR] = column
+	gridview:scrollToCell(section, 2, 1)
+	gridview:setSelection(section, 2, 1)
 	needsRedrawBool = true
 end
 
@@ -424,9 +428,15 @@ function stepRemove(track, step)
 end
 
 function makeFillPattern(fillPercent)
-	local value = math.floor(0xff - (0xff * fillPercent))
+	local value = math.floor(0xff * fillPercent)
+	if value > 255 then
+		value = 255
+	end
+	if value < 0 then
+		value = 0
+	end
 	-- print(dump({ value,value,value,value,value,value,value,value, }))
-	return { value,value,value,value,value,value,value,value, }
+	return { 0,0,0,0,0,0,0,0, value,value,value,value,value,value,value,value,}
 end
 
 function percent(amount, low, high)
@@ -454,12 +464,16 @@ function gridview:drawCell(section, row, column, selected, x, y, width, height)
 
 	if row == 1 then
 		cellText = settingsRowNameTable[column]
+		if column == state then
+			fillPercent = 0.01
+		end
 		-- print("415", cellText)
 	elseif row == 2 then
 		if state == 1 then --SEQ
 			local notes = track:getNotes(column)
 			if (notes ~= nil and notes[1] ~= nil) then
 				fillPercent =  percent(notes[1]["note"], 30, 70)
+				-- print("abc123 1", fillPercent, section, row, column)
 			end
 			cellText = ""..row.."-"..column
 			-- print("444", cellText)
@@ -483,18 +497,20 @@ function gridview:drawCell(section, row, column, selected, x, y, width, height)
 		elseif state == 8 then -- RING
 			tableSelected = ringModulatorRowNameTable
 		elseif state == 9 then -- BPM
-			-- tableSelected = ringModulatorRowNameTable
+			tableSelected = {}
 		end
 		if  tableSelected ~= nil and tableSelected[column] ~= nil then
 			cellText = tableSelected[column]
 			-- print("445", cellText, trackTable[section][EFFECTS_SETTINGS_STR][state][column])
 			if trackTable[section][EFFECTS_SETTINGS_STR][state][column] ~= nil then
 				-- print("fill percent", trackTable[section][EFFECTS_SETTINGS_STR][state][column])
+				-- print("abc123 2", fillPercent, section, row, column)
 				fillPercent = trackTable[section][EFFECTS_SETTINGS_STR][state][column]
 			end
 		end
 	end
 	
+	-- print("abc123 final", fillPercent, section, row, column)
 	playdate.graphics.setPattern(makeFillPattern(fillPercent))
 	playdate.graphics.fillCircleInRect(x + xMod, y + xMod, width + widthMod, height + widthMod, z)
 	playdate.graphics.setColor(playdate.graphics.kColorBlack)

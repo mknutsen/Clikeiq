@@ -26,6 +26,7 @@ function dump(o)
    end
 end
 
+soloMode = false
 needsRedrawBool = false
 gridview = playdate.ui.gridview.new(44, 44)
 gridview:setNumberOfColumns(16)
@@ -48,6 +49,8 @@ settingsRowNameTable[6] = "2F"
 settingsRowNameTable[7] = "BC"
 settingsRowNameTable[8] = "RING"
 settingsRowNameTable[9] = "BPM" -- will be global
+settingsRowNameTable[10] = "ADSR"
+settingsRowNameTable[11] = "SOLO"
 
 bitCrusherRowNameTable = {}
 bitCrusherRowNameTable[1] = "mix"
@@ -83,6 +86,16 @@ delayRowNameTable[3] = "Feedback"
 octaveRowNameTable = {}
 octaveRowNameTable[1] = "-"
 octaveRowNameTable[2] = "+"
+
+bpmRowNameTable = {}
+bpmRowNameTable[1] = "-"
+bpmRowNameTable[2] = "+"
+
+adsrRowNameTable = {}
+adsrRowNameTable[1] = "A"
+adsrRowNameTable[2] = "D"
+adsrRowNameTable[3] = "S"
+adsrRowNameTable[4] = "R"
 
 filterTypes = {}
 filterTypes[1] = playdate.sound.kFilterLowPass
@@ -142,7 +155,9 @@ function makeTrack(number)
 	trackTable[number][EFFECTS_SETTINGS_STR][6] = { 0,0 } -- 2F
 	trackTable[number][EFFECTS_SETTINGS_STR][7] = { 0,0,0 } -- BC
 	trackTable[number][EFFECTS_SETTINGS_STR][8] = { 0,0 } -- RING
-	trackTable[number][EFFECTS_SETTINGS_STR][9] = { 0,0,0 } -- BPM
+	trackTable[number][EFFECTS_SETTINGS_STR][9] = {  } -- bpm
+	trackTable[number][EFFECTS_SETTINGS_STR][10] = { 0,0,0,0 } -- ADSR
+	trackTable[number][EFFECTS_SETTINGS_STR][11] = { } -- solo
 	
 	trackTable[number][TRACK_STR] = playdate.sound.track.new()
 	trackTable[number][INSTRUMENT_STR] = playdate.sound.instrument.new()
@@ -228,34 +243,69 @@ function main()
 		-- ab are inputs
 		AButtonUp = function()
 			local section, row, column = gridview:getSelection()
-			if row == 1 then
-				settingsButton(section, column)
-			elseif row == 2 then
-				rowTwoButton(section, column)
+			if soloMode then
+				trackTable[section][INSTRUMENT_STR]:allNotesOff()
+			else
+				if row == 1 then
+					settingsButton(section, column)
+				elseif row == 2 then
+					rowTwoButton(section, column)
+				end
+				-- print("UPDATING")
+				needsRedrawBool= true
 			end
-			-- print("UPDATING")
-			needsRedrawBool= true
+		end,
+		AButtonDown = function()
+			if soloMode then
+				local section, row, column = gridview:getSelection()
+				trackTable[section][INSTRUMENT_STR]:playMIDINote(trackTable[section][NOTE_STR])
+			end
 		end,
 		
 		BButtonUp = function()
-			
+			if soloMode then
+				soloMode = false
+				local section, row, column = gridview:getSelection()
+				trackTable[section][STATE_STR] = 1
+				gridview:scrollToCell(section, 1, 1)
+				gridview:setSelection(section, 1, 1)
+			end
 		end,
 		--  directional buttons are for navigation
 		downButtonUp = function()
-			gridview:selectNextRow(false)
+			if not soloMode then
+				gridview:selectNextRow(false)
+			end
 		end,
 		
 		leftButtonUp = function()
-			gridview:selectPreviousColumn(false)
+			if not soloMode then
+				gridview:selectPreviousColumn(false)
+			end
 		end,
 		
 		rightButtonUp = function()
-			gridview:selectNextColumn(false)
+			if not soloMode then
+				gridview:selectNextColumn(false)
+			end
 		end,
 		
 		upButtonUp = function()
-			gridview:selectPreviousRow(false)
+			if not soloMode then
+				gridview:selectPreviousRow(false)
+			end
 		end,
+		cranked = function(change, acceleratedChange)
+			if soloMode then
+				local section, row, column = gridview:getSelection()
+				noteChanged = 12 * (change / 360)
+				trackTable[section][NOTE_STR] += noteChanged
+				if playdate.buttonIsPressed(playdate.kButtonA) then
+					trackTable[section][INSTRUMENT_STR]:playMIDINote(trackTable[section][NOTE_STR])
+				end
+				
+			end
+		end
 	}
 	
 	-- add input handlers to global state
@@ -292,7 +342,7 @@ function rowTwoButton(section, column)
 			trackTable[section][EFFECTS_SETTINGS_STR][state][column] = crank
 		end
 		if column == 2 then -- 2 Tap
-			trackTable[section][DELAY_STR]:addTap(crank)
+			trackTable[section][DELAY_STR]:addTap(crank * 0.5)
 			trackTable[section][EFFECTS_SETTINGS_STR][state][column] = 1
 		end
 		if column == 3 then -- 3 Feedback
@@ -382,13 +432,41 @@ function rowTwoButton(section, column)
 		end
 		
 	elseif state == 9 then -- BPM
-		
+		local tempo = sequence:getTempo()
+		if column == 1 then
+			tempo -= 1
+		elseif column == 2 then
+			tempo += 1
+		end
+		if tempo <= 1 then
+			tempo = 1
+		end
+		sequence:setTempo(tempo)
+		sequence:play()
+	elseif state == 10 then -- ADSR
+		adsrValue = 2 * crank -- crank controls up to 2 seconds
+		if column == 1 then -- attack
+			trackTable[section][SYNTH_STR]:setAttack(adsrValue)	
+			trackTable[section][EFFECTS_SETTINGS_STR][state][column] = crank
+		elseif column == 2 then -- decay
+			trackTable[section][SYNTH_STR]:setDecay(adsrValue)
+			trackTable[section][EFFECTS_SETTINGS_STR][state][column] = crank
+		elseif column == 3 then -- sustain
+			trackTable[section][SYNTH_STR]:setSustain(adsrValue)
+			trackTable[section][EFFECTS_SETTINGS_STR][state][column] = crank
+		elseif column == 4 then -- release
+			trackTable[section][SYNTH_STR]:setRelease(adsrValue)
+			trackTable[section][EFFECTS_SETTINGS_STR][state][column] = crank
+		end
 	end
 	
 end
 
 function settingsButton(section, column)
 	trackTable[section][STATE_STR] = column
+	if column == 11 then
+		soloMode = true
+	end
 	gridview:scrollToCell(section, 2, 1)
 	gridview:setSelection(section, 2, 1)
 	needsRedrawBool = true
@@ -475,12 +553,12 @@ function gridview:drawCell(section, row, column, selected, x, y, width, height)
 				fillPercent =  percent(notes[1]["note"], 30, 70)
 				-- print("abc123 1", fillPercent, section, row, column)
 			end
-			cellText = ""..row.."-"..column
+			cellText = ""..section.."-"..column
 			-- print("444", cellText)
 			tableSelected = {}
 		elseif state == 2 then --OCT
 			tableSelected = octaveRowNameTable
-			tableSelected[3] = ""..trackTable[section][NOTE_STR].."-"
+			tableSelected[3] = ""..trackTable[section][NOTE_STR].."!"
 			
 		elseif state == 3 then --DEL
 			tableSelected = delayRowNameTable
@@ -497,12 +575,16 @@ function gridview:drawCell(section, row, column, selected, x, y, width, height)
 		elseif state == 8 then -- RING
 			tableSelected = ringModulatorRowNameTable
 		elseif state == 9 then -- BPM
-			tableSelected = {}
+			tableSelected = bpmRowNameTable
+			tableSelected[3] = ""..sequence:getTempo().." B)"		
+		elseif state == 10 then -- ADSR
+			tableSelected = adsrRowNameTable
 		end
+
 		if  tableSelected ~= nil and tableSelected[column] ~= nil then
 			cellText = tableSelected[column]
 			-- print("445", cellText, trackTable[section][EFFECTS_SETTINGS_STR][state][column])
-			if trackTable[section][EFFECTS_SETTINGS_STR][state][column] ~= nil then
+			if trackTable[section][EFFECTS_SETTINGS_STR][state] ~= nil and trackTable[section][EFFECTS_SETTINGS_STR][state][column] ~= nil then
 				-- print("fill percent", trackTable[section][EFFECTS_SETTINGS_STR][state][column])
 				-- print("abc123 2", fillPercent, section, row, column)
 				fillPercent = trackTable[section][EFFECTS_SETTINGS_STR][state][column]

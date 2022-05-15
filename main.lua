@@ -167,6 +167,11 @@ function makeTrack(number)
 	trackTable[number][OVERDRIVE_STR]:setLimit(0.5)
 	trackTable[number][CHANNEL_STR]:addEffect(trackTable[number][OVERDRIVE_STR])
 	
+	trackTable[number][UNIPOLE_FILTER_STR] = playdate.sound.onepolefilter.new()
+	trackTable[number][UNIPOLE_FILTER_STR]:setMix(0)
+	trackTable[number][UNIPOLE_FILTER_STR]:setParameter(0)
+	trackTable[number][CHANNEL_STR]:addEffect(trackTable[number][UNIPOLE_FILTER_STR])
+	
 	trackTable[number][BIPOLAR_FILTER_STR] = playdate.sound.twopolefilter.new(playdate.sound.kFilterBandPass)
 	trackTable[number][BIPOLAR_FILTER_STR]:setMix(0)
 	trackTable[number][BIPOLAR_FILTER_STR]:setFrequency(200)
@@ -229,7 +234,6 @@ function main()
 			end
 			print("UPDATING")
 			needsRedrawBool= true
-			playdate.update()
 		end,
 		
 		BButtonUp = function()
@@ -286,11 +290,11 @@ function rowTwoButton(section, column)
 			trackTable[section][EFFECTS_SETTINGS_STR][state][column] = crank
 		end
 		if column == 2 then -- 2 Tap
-			trackTable[section][OVERDRIVE_STR]:addTap(crank)
+			trackTable[section][DELAY_STR]:addTap(crank)
 			trackTable[section][EFFECTS_SETTINGS_STR][state][column] = 1
 		end
 		if column == 3 then -- 3 Feedback
-			trackTable[section][OVERDRIVE_STR]:setFeedback(level)(crank)
+			trackTable[section][DELAY_STR]:setFeedback(level)(crank)
 			trackTable[section][EFFECTS_SETTINGS_STR][state][column] = crank
 		end
 			
@@ -319,7 +323,7 @@ function rowTwoButton(section, column)
 			trackTable[section][UNIPOLE_FILTER_STR]:setMix(crank)
 			trackTable[section][EFFECTS_SETTINGS_STR][state][column] = crank
 			
-		elseif column == 1 then -- 1 parameter
+		elseif column == 2 then -- 1 parameter
 			trackTable[section][UNIPOLE_FILTER_STR]:setParameter(4000 * crank)
 			trackTable[section][EFFECTS_SETTINGS_STR][state][column] = crank
 		end
@@ -384,7 +388,6 @@ end
 function settingsButton(section, column)
 	trackTable[section][STATE_STR] = column
 	needsRedrawBool = true
-	playdate.update()
 end
 
 function stepActive(track, step)
@@ -447,11 +450,11 @@ function gridview:drawCell(section, row, column, selected, x, y, width, height)
 	
 	local fillPercent = 0
 	cellText = " "
-	print("412", cellText)
+	-- print("412", cellText)
 
 	if row == 1 then
 		cellText = settingsRowNameTable[column]
-		print("415", cellText)
+		-- print("415", cellText)
 	elseif row == 2 then
 		if state == 1 then --SEQ
 			local notes = track:getNotes(column)
@@ -459,7 +462,7 @@ function gridview:drawCell(section, row, column, selected, x, y, width, height)
 				fillPercent =  percent(notes[1]["note"], 30, 70)
 			end
 			cellText = ""..row.."-"..column
-			print("444", cellText)
+			-- print("444", cellText)
 			tableSelected = {}
 		elseif state == 2 then --OCT
 			tableSelected = octaveRowNameTable
@@ -484,9 +487,9 @@ function gridview:drawCell(section, row, column, selected, x, y, width, height)
 		end
 		if  tableSelected ~= nil and tableSelected[column] ~= nil then
 			cellText = tableSelected[column]
-			print("445", cellText, trackTable[section][EFFECTS_SETTINGS_STR][state][column])
+			-- print("445", cellText, trackTable[section][EFFECTS_SETTINGS_STR][state][column])
 			if trackTable[section][EFFECTS_SETTINGS_STR][state][column] ~= nil then
-				print("fill percent", trackTable[section][EFFECTS_SETTINGS_STR][state][column])
+				-- print("fill percent", trackTable[section][EFFECTS_SETTINGS_STR][state][column])
 				fillPercent = trackTable[section][EFFECTS_SETTINGS_STR][state][column]
 			end
 		end
@@ -497,7 +500,7 @@ function gridview:drawCell(section, row, column, selected, x, y, width, height)
 	playdate.graphics.setColor(playdate.graphics.kColorBlack)
 	playdate.graphics.drawCircleInRect(x + xMod, y + xMod, width + widthMod, height + widthMod, z)
 	playdate.graphics.drawTextInRect(cellText, x, y+14, width, 20, nil, nil, kTextAlignment.center)
-	print(section, row, column, cellText)
+	-- print(section, row, column, cellText)
 end
 
 function gridview:drawSectionHeader(section, x, y, width, height)
@@ -507,7 +510,7 @@ end
 function needsRedraw()
 	needsRedrawOld = needsRedrawBool
 	needsRedrawBool = false
-	return needsRedrawBool
+	return needsRedrawOld
 end
 
 function playdate.update()

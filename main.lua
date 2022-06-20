@@ -51,6 +51,14 @@ settingsRowNameTable[8] = "RING"
 settingsRowNameTable[9] = "BPM" -- will be global
 settingsRowNameTable[10] = "ADSR"
 settingsRowNameTable[11] = "SOLO"
+settingsRowNameTable[12] = "VOLUME"
+
+soloRowNameTable = {}
+soloRowNameTable[1] = "HIT"
+soloRowNameTable[2] = "B"
+soloRowNameTable[3] = "TO"
+soloRowNameTable[4] = "EXIT"
+
 
 bitCrusherRowNameTable = {}
 bitCrusherRowNameTable[1] = "mix"
@@ -96,6 +104,9 @@ adsrRowNameTable[1] = "A"
 adsrRowNameTable[2] = "D"
 adsrRowNameTable[3] = "S"
 adsrRowNameTable[4] = "R"
+
+volumeRowNameTable = {}
+volumeRowNameTable[1] = "Volume"
 
 filterTypes = {}
 filterTypes[1] = playdate.sound.kFilterLowPass
@@ -158,6 +169,7 @@ function makeTrack(number)
 	trackTable[number][EFFECTS_SETTINGS_STR][9] = {  } -- bpm
 	trackTable[number][EFFECTS_SETTINGS_STR][10] = { 0,0,0,0 } -- ADSR
 	trackTable[number][EFFECTS_SETTINGS_STR][11] = { } -- solo
+	trackTable[number][EFFECTS_SETTINGS_STR][12] = { 0 } -- volume
 	
 	trackTable[number][TRACK_STR] = playdate.sound.track.new()
 	trackTable[number][INSTRUMENT_STR] = playdate.sound.instrument.new()
@@ -316,7 +328,7 @@ end
 function rowTwoButton(section, column)
 	local state <const> = trackTable[section][STATE_STR]
 	local crank <const> = getCrankPos()
-	-- print("crank", crank)
+	print("crank", crank)
 	
 	if state == 1 then --SEQ
 		local track = getTrack(section)
@@ -458,8 +470,12 @@ function rowTwoButton(section, column)
 			trackTable[section][SYNTH_STR]:setRelease(adsrValue)
 			trackTable[section][EFFECTS_SETTINGS_STR][state][column] = crank
 		end
+	elseif state == 12 then -- volume
+		if column == 1 then
+			trackTable[section][INSTRUMENT_STR]:setVolume(crank)
+			trackTable[section][EFFECTS_SETTINGS_STR][state][column] = crank
+		end
 	end
-	
 end
 
 function settingsButton(section, column)
@@ -579,6 +595,10 @@ function gridview:drawCell(section, row, column, selected, x, y, width, height)
 			tableSelected[3] = ""..sequence:getTempo().." B)"		
 		elseif state == 10 then -- ADSR
 			tableSelected = adsrRowNameTable
+		elseif state == 11 then -- solo
+			tableSelected = soloRowNameTable
+		elseif state == 12 then -- solo
+			tableSelected = volumeRowNameTable
 		end
 
 		if  tableSelected ~= nil and tableSelected[column] ~= nil then

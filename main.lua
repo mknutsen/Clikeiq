@@ -543,6 +543,12 @@ function gridview:drawCell(section, row, column, selected, x, y, width, height)
 	local isStepActive = false
 	local track = getTrack(section)
 	local state = trackTable[section][STATE_STR]
+
+	local notes = track:getNotes(column)
+	local note = ""
+	if (notes ~= nil and notes[1] ~= nil) then
+		note = ""..notes[1]["note"]..""
+	then
 	
 	local xMod = 4
 	local widthMod = -8
@@ -566,12 +572,11 @@ function gridview:drawCell(section, row, column, selected, x, y, width, height)
 		-- print("415", cellText)
 	elseif row == 2 then
 		if state == 1 then --SEQ
-			local notes = track:getNotes(column)
 			if (notes ~= nil and notes[1] ~= nil) then
 				fillPercent =  percent(notes[1]["note"], 30, 70)
 				-- print("abc123 1", fillPercent, section, row, column)
 			end
-			cellText = ""..column..""
+			cellText = ""..note..""
 			-- print("444", cellText)
 			tableSelected = {}
 		elseif state == 2 then --OCT

@@ -40,7 +40,8 @@ gridview.changeRowOnColumnWrap = false
 gridview:setScrollPosition(2,2)
 
 sequence = playdate.sound.sequence.new()
-
+alpha =  5
+downBeatFill =  { 0xaa, 0x55, 0xaa, 0x55, 0xaa, 0x55, 0xaa, 0x55,  alpha,alpha,alpha,alpha,alpha,alpha,alpha,alpha}
 settingsRowNameTable = {}
 settingsRowNameTable[1] = "SEQ"
 settingsRowNameTable[2] = "OCT"
@@ -257,9 +258,8 @@ function main()
 		-- ab are inputs
 		AButtonUp = function()
 			local section, row, column = gridview:getSelection()
-			if soloMode then
-				trackTable[section][INSTRUMENT_STR]:allNotesOff()
-			else
+			trackTable[section][INSTRUMENT_STR]:allNotesOff()
+			if soloMode  == false then
 				if row == 1 then
 					settingsButton(section, column)
 				elseif row == 2 then
@@ -270,10 +270,10 @@ function main()
 			end
 		end,
 		AButtonDown = function()
-			if soloMode then
-				local section, row, column = gridview:getSelection()
-				trackTable[section][INSTRUMENT_STR]:playMIDINote(trackTable[section][NOTE_STR])
-			end
+			-- if soloMode then
+			local section, row, column = gridview:getSelection()
+			trackTable[section][INSTRUMENT_STR]:playMIDINote(trackTable[section][NOTE_STR])
+			-- end
 		end,
 		
 		BButtonUp = function()
@@ -310,15 +310,13 @@ function main()
 			end
 		end,
 		cranked = function(change, acceleratedChange)
-			if soloMode then
+			if playdate.buttonIsPressed(playdate.kButtonA) then
 				local section, row, column = gridview:getSelection()
 				noteChanged = 12 * (change / 360)
 				trackTable[section][NOTE_STR] += noteChanged
-				if playdate.buttonIsPressed(playdate.kButtonA) then
-					trackTable[section][INSTRUMENT_STR]:playMIDINote(trackTable[section][NOTE_STR])
-				end
-				
+				trackTable[section][INSTRUMENT_STR]:playMIDINote(trackTable[section][NOTE_STR])
 			end
+			
 		end
 	}
 	
@@ -548,7 +546,8 @@ function gridview:drawCell(section, row, column, selected, x, y, width, height)
 	local note = ""
 	if (notes ~= nil and notes[1] ~= nil) then
 		note = ""..notes[1]["note"]..""
-	then
+		note = string.sub(note, 1, 3)
+	end
 	
 	local xMod = 4
 	local widthMod = -8
@@ -604,7 +603,7 @@ function gridview:drawCell(section, row, column, selected, x, y, width, height)
 			tableSelected = adsrRowNameTable
 		elseif state == 11 then -- solo
 			tableSelected = soloRowNameTable
-		elseif state == 12 then -- solo
+		elseif state == 12 then -- vol
 			tableSelected = volumeRowNameTable
 		end
 
@@ -620,9 +619,11 @@ function gridview:drawCell(section, row, column, selected, x, y, width, height)
 	end
 	
 	-- print("abc123 final", fillPercent, section, row, column)
-	playdate.graphics.setPattern(makeFillPattern(fillPercent))
-	playdate.graphics.fillRect(x, y, width, height)
-	playdate.graphics.setColor(playdate.graphics.kColorBlack)
+	if column % 4 == 1 and row == 2 and state == 1 then -- if we are in the grid we want to shade the first of each 4 
+		playdate.graphics.setPattern(downBeatFill)
+		playdate.graphics.fillRect(x, y, width, height)
+		playdate.graphics.setColor(playdate.graphics.kColorBlack)
+	end
 	playdate.graphics.drawRect(x, y, width, height)
 	if selected then
 		playdate.graphics.drawRect(x-2, y-2, width+2, height+2)
@@ -638,13 +639,22 @@ end
 function needsRedraw()
 	needsRedrawOld = needsRedrawBool
 	needsRedrawBool = false
-	return needsRedrawOld
+	-- return needsRedrawOld
+	return true
 end
 
 function playdate.update()
 	if gridview.needsDisplay == true or needsRedraw() then
 		playdate.graphics.clear()
 		gridview:drawInRect(0, 0, 400, 240)
+
+		local section, row, column = gridview:getSelection()
+
+		local crank  = getCrankPos()
+		local noteToPlay = trackTable[section][NOTE_STR] + crank * 12
+		noteToPlay = string.sub(noteToPlay, 1, 3)
+
+		playdate.graphics.drawTextInRect(""..noteToPlay, 240, 0, 50, 50, nil, nil, kTextAlignment.center)
 	end
 	playdate.timer:updateTimers()
 end

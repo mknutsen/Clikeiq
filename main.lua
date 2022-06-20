@@ -25,15 +25,17 @@ function dump(o)
 	  return tostring(o)
    end
 end
+font = playdate.graphics.getTextSize("FF")
+print(dump(font))
 
 soloMode = false
 needsRedrawBool = false
-gridview = playdate.ui.gridview.new(44, 44)
+gridview = playdate.ui.gridview.new(44, 22)
 gridview:setNumberOfColumns(16)
 gridview:setNumberOfRows(2,2,2,2)
-gridview:setSectionHeaderHeight(24)
+gridview:setSectionHeaderHeight(15)
 gridview:setContentInset(1, 4, 1, 4)
-gridview:setCellPadding(4, 4, 4, 4)
+gridview:setCellPadding(0, 0, 0, 0)
 gridview.changeRowOnColumnWrap = false
 gridview:setScrollPosition(2,2)
 
@@ -569,7 +571,7 @@ function gridview:drawCell(section, row, column, selected, x, y, width, height)
 				fillPercent =  percent(notes[1]["note"], 30, 70)
 				-- print("abc123 1", fillPercent, section, row, column)
 			end
-			cellText = ""..section.."-"..column
+			cellText = ""..column..""
 			-- print("444", cellText)
 			tableSelected = {}
 		elseif state == 2 then --OCT
@@ -614,15 +616,18 @@ function gridview:drawCell(section, row, column, selected, x, y, width, height)
 	
 	-- print("abc123 final", fillPercent, section, row, column)
 	playdate.graphics.setPattern(makeFillPattern(fillPercent))
-	playdate.graphics.fillCircleInRect(x + xMod, y + xMod, width + widthMod, height + widthMod, z)
+	playdate.graphics.fillRect(x, y, width, height)
 	playdate.graphics.setColor(playdate.graphics.kColorBlack)
-	playdate.graphics.drawCircleInRect(x + xMod, y + xMod, width + widthMod, height + widthMod, z)
-	playdate.graphics.drawTextInRect(cellText, x, y+14, width, 20, nil, nil, kTextAlignment.center)
+	playdate.graphics.drawRect(x, y, width, height)
+	if selected then
+		playdate.graphics.drawRect(x-2, y-2, width+2, height+2)
+	end
+	playdate.graphics.drawTextInRect(cellText, x, y, width, 20, nil, nil, kTextAlignment.center)
 	-- print(section, row, column, cellText)
 end
 
 function gridview:drawSectionHeader(section, x, y, width, height)
-	playdate.graphics.drawText(getSectionName(section) .. "*", x + 10, y + 8)
+	playdate.graphics.drawText(getSectionName(section) .. "*", x, y)
 end
 
 function needsRedraw()
